@@ -1,0 +1,42 @@
+#!/bin/sh
+# nexios-agent-demo [task-id] — a tiny stand-in agent runtime for demos and
+# manual testing. Writes task events to $XDG_RUNTIME_DIR/nexios-agent per
+# docs/agent-protocol.md: started -> milestones -> approval_request -> waits
+# for the human's decision in decisions/ -> resolved -> finished.
+set -eu
+rtd="${XDG_RUNTIME_DIR:?XDG_RUNTIME_DIR is not set}/nexios-agent"
+id="${1:-demo-task}"
+tasks="$rtd/tasks"; decisions="$rtd/decisions"
+mkdir -p "$tasks" "$decisions"
+log="$tasks/$id.jsonl"
+now() { date +%s; }
+
+{
+    printf '{"ts":%d,"type":"started","name":"Demo agent task","objective":"Exercise the agent protocol end to end","agent":"demo-runtime","interactive":true,"environment":"demo (no sandbox)"}\n' "$(now)"
+    sleep 1
+    printf '{"ts":%d,"type":"milestone","text":"Task accepted, starting work"}\n' "$(now)"
+    sleep 2
+    printf '{"ts":%d,"type":"milestone","text":"Halfway — needs the human for the next step"}\n' "$(now)"
+    printf '{"ts":%d,"type":"status","state":"working"}\n' "$(now)"
+    printf '{"ts":%d,"type":"approval_request","request_id":"req-1","action":"Write to repo files","resource":"src/example.ts","reason":"Demo approval so the island card shows","reversible":true,"scopes":["once","session"]}\n' "$(now)"
+} >> "$log"
+
+echo "nexios-agent-demo: task '$id' is waiting for approval (deny or approve in the island)"
+
+# Wait for a decision line naming req-1 (up to ~10 min).
+i=0
+while [ "$i" -lt 600 ]; do
+    if grep -q '"req-1"' "$decisions/$id.jsonl" 2>/dev/null; then break; fi
+    sleep 1; i=$((i + 1))
+done
+if ! grep -q '"req-1"' "$decisions/$id.jsonl" 2>/dev/null; then
+    printf '{"ts":%d,"type":"blocked","text":"No decision within 10 minutes"}\n' "$(now)" >> "$log"
+    exit 1
+fi
+
+printf '{"ts":%d,"type":"approval_resolved","request_id":"req-1"}\n' "$(now)" >> "$log"
+sleep 1
+printf '{"ts":%d,"type":"milestone","text":"Decision received — finishing up"}\n' "$(now)" >> "$log"
+sleep 1
+printf '{"ts":%d,"type":"finished","summary":"Demo task done: approval round-tripped through the island."}\n' "$(now)" >> "$log"
+echo "nexios-agent-demo: task '$id' finished"
