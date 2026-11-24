@@ -389,7 +389,7 @@ pub fn draw_bar(
     let now = chrono::Local::now();
     let clock_str = now.format(prefs.look.clock_format()).to_string();
     let date_str = if prefs.look.show_date {
-        now.format("%a %b %-d").to_string()
+        now.format("%a %-d %b").to_string()
     } else {
         String::new()
     };
