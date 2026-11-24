@@ -1,5 +1,5 @@
-//! Desktop widget cards — calendar, weather and photos — in the style of the
-//! modern macOS desktop: small frosted squares on the top-left of the
+//! Desktop widget cards — calendar, clock, weather and photos — in the style
+//! of the modern macOS desktop: small frosted squares on the top-left of the
 //! workspace, under the wallpaper and the windows.
 //!
 //! The cards are passive: they take no clicks, so the surface they live on
@@ -24,9 +24,10 @@ pub const RADIUS: f32 = 18.0;
 const CARD_PAD: i32 = 14;
 
 /// Card rectangles in surface coordinates, for the compositor blur region.
-pub fn card_rects() -> [(i32, i32, i32, i32); 3] {
+pub fn card_rects() -> [(i32, i32, i32, i32); 4] {
     [
         (0, 0, SQ, SQ),                    // calendar
+        (SQ + GAP, 0, SQ, SQ),             // clock
         (0, SQ + GAP, SQ, SQ),             // weather
         (SQ + GAP, SQ + GAP, PHOTO_W, SQ), // photos
     ]
@@ -377,7 +378,59 @@ fn paint_photos(cv: &mut Canvas<'_>, fonts: &Fonts, photo: Option<&Icon>, x: i32
     }
 }
 
-/// Paint all three cards with their top-left at `x`,`y`. `slab` is the glass
+/// The clock's analog face: light dial, dark hands, red second hand — the
+/// macOS Clock widget. `now` is a parameter so previews and tests can pin it.
+fn paint_clock(cv: &mut Canvas<'_>, fonts: &Fonts, x: i32, y: i32, now: chrono::DateTime<Local>) {
+    use chrono::Timelike;
+    let (ink, dim) = cal_ink();
+    cv.text(
+        fonts.semibold.as_ref(),
+        "Local",
+        x + CARD_PAD,
+        y + CARD_PAD + 13,
+        12.0,
+        ink,
+    );
+    let cx = x as f32 + SQ as f32 / 2.0;
+    let cy = y as f32 + SQ as f32 / 2.0 + 12.0;
+    let r = 42.0;
+    // Dial: warm white face, hairline rim.
+    cv.circle(cx, cy, r, Rgba::rgb(0xfa, 0xfa, 0xf7));
+    cv.stroke_round_rect(
+        (cx - r) as i32,
+        (cy - r) as i32,
+        (r * 2.0) as i32,
+        (r * 2.0) as i32,
+        r,
+        1.0,
+        Rgba::rgba(0x24, 0x26, 0x2b, 60),
+    );
+    for i in 0..12 {
+        let a = i as f32 / 12.0 * std::f32::consts::TAU - std::f32::consts::FRAC_PI_2;
+        let major = i % 3 == 0;
+        let (inner, thick) = if major { (r - 9.0, 2.2) } else { (r - 5.0, 1.4) };
+        cv.line(
+            cx + a.cos() * inner,
+            cy + a.sin() * inner,
+            cx + a.cos() * (r - 2.0),
+            cy + a.sin() * (r - 2.0),
+            thick,
+            if major { ink } else { dim },
+        );
+    }
+    let secs = now.num_seconds_from_midnight() as f32 + now.timestamp_subsec_millis() as f32 / 1000.0;
+    let mut hand = |frac: f32, len: f32, thick: f32, col: Rgba| {
+        let a = frac * std::f32::consts::TAU - std::f32::consts::FRAC_PI_2;
+        cv.line(cx, cy, cx + a.cos() * len, cy + a.sin() * len, thick, col);
+    };
+    hand(secs / 43200.0, r * 0.5, 3.6, ink); // hour
+    hand(secs / 3600.0 % 1.0, r * 0.72, 2.6, ink); // minute
+    hand(secs / 60.0 % 1.0, r * 0.78, 1.1, Rgba::rgb(0xf5, 0x45, 0x36)); // second
+    cv.circle(cx, cy, 3.0, ink);
+    cv.circle(cx, cy, 1.3, Rgba::rgb(0xf5, 0x45, 0x36));
+}
+
+/// Paint all four cards with their top-left at `x`,`y`. `slab` is the glass
 /// material the bar and dock use, so the widgets share the same frost.
 pub fn paint(
     cv: &mut Canvas<'_>,
@@ -388,11 +441,14 @@ pub fn paint(
     x: i32,
     y: i32,
 ) {
-    let [(cx, cy, cw, ch), (wx, wy, ww, wh), (px, py, pw, ph)] = card_rects();
+    let [(cx, cy, cw, ch), (kx, ky, kw, kh), (wx, wy, ww, wh), (px, py, pw, ph)] =
+        card_rects();
     card(cv, slab, x + cx, y + cy, cw, ch);
+    card(cv, slab, x + kx, y + ky, kw, kh);
     card(cv, slab, x + wx, y + wy, ww, wh);
     card(cv, slab, x + px, y + py, pw, ph);
     paint_cal(cv, fonts, &v.cal, x + cx, y + cy);
+    paint_clock(cv, fonts, x + kx, y + ky, Local::now());
     paint_weather(cv, fonts, &v.weather, x + wx, y + wy);
     paint_photos(cv, fonts, v.photo.as_ref(), x + px, y + py);
 }
