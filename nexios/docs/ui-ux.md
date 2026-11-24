@@ -71,3 +71,10 @@ whole Nexios thesis.*
 - macOS's exact layout *metrics-as-clone*: being "inspired by" is fine; a
   pixel-identical menu bar + dock + icons could read as trade-dress. Solyra's
   iris identity is the differentiator.
+
+## Lock screen
+
+`nexios-cmd lock` (or the Nexios menu) spawns `nexios-panel lock` — a
+session lock that verifies the user's password through PAM. The distro
+image must ship `shell/nexios-lock.pam` at `/etc/pam.d/nexios-lock`;
+without that service every password fails (PAM denies by default).
