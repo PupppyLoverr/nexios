@@ -28,6 +28,9 @@ pub const CARD_H: i32 = 62;
 const DOCK_R: f32 = 22.0;
 /// Extra room above the card for magnified icons.
 pub const MAGNIFY_ROOM: i32 = 30;
+/// Extra room above the card for the hover label, always present: the
+/// label is part of the macOS dock feel even without magnification.
+pub const LABEL_ROOM: i32 = 28;
 /// Height of the taskbar-style taskbar.
 pub const TASKBAR_H: u32 = 48;
 /// What is left of an auto-hidden dock: a strip at the screen edge that
@@ -216,7 +219,7 @@ pub fn spec(style: DockStyle, wins: &[WindowInfo], magnify: bool, hidden: bool) 
             exclusive: 0,
             bottom_margin: 12,
             width: w as u32,
-            height: CARD_H as u32,
+            height: (CARD_H + LABEL_ROOM) as u32,
         }
     }
 }
@@ -472,8 +475,9 @@ fn draw_floating(
                     if e.window_count > 0 {
                         running_mark(cv, ink, x, s, card_y, e.is_focused);
                     }
-                    if hov && magnify {
-                        tooltip(cv, th, fonts, &e.title, x + s / 2, y - 6, w);
+                    if hov {
+                        // Name label above the card, like the real dock.
+                        tooltip(cv, th, fonts, &e.title, x + s / 2, card_y - 6, w);
                     }
                 }
                 if let Item::Agent = it {

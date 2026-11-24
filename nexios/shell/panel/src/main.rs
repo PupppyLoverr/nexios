@@ -410,10 +410,11 @@ fn make_dock_surface(
     slot
 }
 
-/// A magnifying dock's surface is taller than its card; only the card takes
-/// the pointer, so clicks in the clear room above reach the window below.
+/// A floating dock's surface is taller than its card (label room, magnify
+/// room); only the card takes the pointer, so clicks in the clear room
+/// above reach the window below.
 fn set_dock_input_region(compositor: &CompositorState, surface: &WlSurface, spec: &dock::Spec) {
-    if spec.namespace != "nexios-dock-magnify" {
+    if spec.namespace != "nexios-dock-magnify" && spec.namespace != "nexios-dock" {
         surface.set_input_region(None);
         return;
     }

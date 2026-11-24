@@ -677,6 +677,7 @@ fn render_all() -> Vec<Shot> {
         let dock_wins = [win(1, "foot", "x", true), win(2, "thunar", "y", false)];
         for (name, style, magnify, hover) in [
             ("dock-nexios", DockStyle::Nexios, false, None),
+            ("dock-nexios-hover", DockStyle::Nexios, false, Some(0.35f64)),
             ("dock-floating", DockStyle::Floating, false, None),
             (
                 "dock-floating-magnify",
