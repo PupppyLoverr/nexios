@@ -1,0 +1,32 @@
+// Example niri config for running the nexios shell.
+// Install: cp nexios/shell/niri.kdl ~/.config/niri/config.kdl
+// Requires nexios-panel and shell/bin/nexios-open + shell/bin/nexios-cmd on PATH.
+
+input {
+    keyboard {
+        xkb {
+            layout "us"
+        }
+    }
+}
+
+layout {
+    gaps 8
+    center-focused-column "never"
+}
+
+hotkey-overlay {
+    skip-at-startup
+}
+
+prefer-no-csd
+
+binds {
+    Mod+Space { spawn-sh "nexios-cmd toggle-launcher"; }
+    Mod+D { spawn-sh "nexios-cmd toggle-launcher"; }
+    Mod+Shift+C { spawn-sh "nexios-cmd toggle-control"; }
+    Mod+Shift+A { spawn-sh "nexios-cmd toggle-agents"; }
+    Mod+Escape { spawn-sh "nexios-cmd close"; }
+}
+
+spawn-at-startup "nexios-panel"

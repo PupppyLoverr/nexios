@@ -1,0 +1,6 @@
+#!/bin/sh
+# nexios-cmd <command...> — send a command line to the running shell's
+# control socket ($XDG_RUNTIME_DIR/nexios-shell.sock): launcher, control,
+# island, agents, close, lock, dock <style>, wallpaper <preset>, notify <text>.
+sock="${XDG_RUNTIME_DIR:?XDG_RUNTIME_DIR is not set}/nexios-shell.sock"
+printf '%s\n' "$*" | socat - "UNIX-CONNECT:$sock"
