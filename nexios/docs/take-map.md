@@ -16,7 +16,17 @@ Everything here is license-clean to reuse per the per-file SPDX headers.
 | `linux/` (in-tree FKI driver form) | GPL-2.0 | **Code** | Same FKI as an in-tree driver — for a distro that builds its own kernel (Solyra ships a Fedora kernel today; in-tree FKI is the cleaner long-term route vs DKMS-style builds). |
 | Architecture: the page-table slot trick | — | **Recipe** | Sharing the root page table at an unused L1 slot so hardware walks the guest's own tables — eliminates the VM-exit/MMU-shadow problem entirely. Generalisable to hosted personalities on arm64. |
 
+| `tools/hosted/` (fb2png, xnu-input, serial-pty, net-up, console-send-file, gui-user) | GPL-2.0 | **Code — lift as-is** | The host-side plumbing for a hosted desktop: `fb2png.py` (~40 lines: raw BGRA framebuffer → PNG), `xnu-input.py` (writes Linux evdev records into a file → click/type/scroll inside the guest), `gui-user.py` (auto-login setup). Directly reusable for any "draw guest screen, send guest input" feature. |
+| `scripts/mk-macvm-disk.sh` + `gui-user.py` (the reach-the-desktop recipe) | GPL-2.0 | **Recipe — the punch-list a hosted macOS needs before Dock/Finder appear** | loginwindow holds the Dock and Finder until Setup Assistant quits: autoLoginUser + `/etc/kcpassword` (XOR `7D 89 52 23 D2 BC DD EA A3 B9 1F`, NUL-padded ×12), `.AppleSetupDone`, the 18-key `DidSee*`/`LastSeen*Build|Version` plist set + `~/.skipbuddy` + `MiniBuddyLaunch=false`. Plus: launchd disable list (watchdogd, audio, PerfPowerServices, Rosetta/oahd), `pmset -a sleep 0`, `screensaver idleTime=0` (ByHost), `com.apple.keyboardtype` (else Keyboard Setup Assistant opens at every login), `kern.memorystatus_highwater_enabled=0` (CPU-Metal blows jetsam limits), cryptex merge into the system volume (unseals root; needs `lp-sip0=0x800`). |
+| `docs/images/*.jpg` | GPL-2.0 (photos of a running system) | **Visual reference** | Real macOS 27 desktop/menu bar/dock/widgets/Finder — the exact target proportions for the nexios clone. Reference only, never copy pixels. |
+
 ## Solyra-side takeaways (for the Infi-AI repo, recorded here)
+
+- **Dock/Finder themselves**: not takeable — they are Apple's binaries
+  (`Dock.app`, `Finder.app`, `loginwindow`, `WindowServer`) on the user's own
+  macOS install; the repo deliberately ships none of them. What is takeable is
+  the recipe that gets them running (table above) and the host plumbing.
+
 
 - **Agent micro-VM GPU path**: use their Venus/Mesa patch list + the
   `xnudrmd` service shape (userspace daemon on the render node, FKI-style
