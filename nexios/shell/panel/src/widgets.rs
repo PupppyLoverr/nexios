@@ -18,18 +18,19 @@ pub const GAP: i32 = 10;
 /// Photos card width — two small cards' worth, like the reference layout.
 pub const PHOTO_W: i32 = 300;
 pub const W: i32 = SQ + GAP + PHOTO_W;
-pub const H: i32 = SQ * 2 + GAP;
+pub const H: i32 = SQ * 3 + GAP * 2;
 pub const RADIUS: f32 = 18.0;
 
 const CARD_PAD: i32 = 14;
 
 /// Card rectangles in surface coordinates, for the compositor blur region.
-pub fn card_rects() -> [(i32, i32, i32, i32); 4] {
+pub fn card_rects() -> [(i32, i32, i32, i32); 5] {
     [
         (0, 0, SQ, SQ),                    // calendar
         (SQ + GAP, 0, SQ, SQ),             // clock
         (0, SQ + GAP, SQ, SQ),             // weather
         (SQ + GAP, SQ + GAP, PHOTO_W, SQ), // photos
+        (0, SQ * 2 + GAP * 2, W, SQ),      // music
     ]
 }
 
@@ -59,6 +60,9 @@ pub struct View {
     pub weather: Option<Weather>,
     /// Newest decodable image in ~/Pictures; `None` draws the placeholder.
     pub photo: Option<Icon>,
+    /// Current MPRIS player, fed from the panel's watcher after `live()`.
+    /// `None` draws the "nothing playing" state.
+    pub media: Option<crate::media::Media>,
 }
 
 /// Pure parser so tests do not touch the filesystem.
@@ -110,6 +114,7 @@ pub fn live() -> View {
         cal: cal_of(today),
         weather: parse_weather(weather_text.as_deref()),
         photo,
+        media: None,
     }
 }
 
@@ -378,6 +383,73 @@ fn paint_photos(cv: &mut Canvas<'_>, fonts: &Fonts, photo: Option<&Icon>, x: i32
     }
 }
 
+/// The Music card — macOS's wide Now Playing widget: art on the left,
+/// title/artist right, progress hairline along the bottom. Click-through,
+/// so no transport buttons (those live on the NC card).
+fn paint_music(cv: &mut Canvas<'_>, fonts: &Fonts, media: Option<&crate::media::Media>, x: i32, y: i32, w: i32) {
+    let (ink, dim) = cal_ink();
+    cv.text(
+        fonts.semibold.as_ref(),
+        "MUSIC",
+        x + CARD_PAD,
+        y + CARD_PAD + 8,
+        8.5,
+        dim,
+    );
+    let Some(m) = media else {
+        cv.draw_app_squircle(x + w / 2 - 22, y + 30, 44, "music", None, fonts);
+        let tw = text_width(fonts.regular.as_ref(), "Nothing playing", 11.0);
+        cv.text(
+            fonts.regular.as_ref(),
+            "Nothing playing",
+            x + (w - tw) / 2,
+            y + 96,
+            11.0,
+            dim,
+        );
+        return;
+    };
+    let art = 76;
+    cv.draw_album_art(x + CARD_PAD, y + CARD_PAD + 20, art, 12.0);
+    let tx = x + CARD_PAD + art + 14;
+    let tw = (x + w - CARD_PAD - tx).max(40);
+    cv.text_truncated(
+        fonts.semibold.as_ref(),
+        &m.title,
+        tx,
+        y + CARD_PAD + 34,
+        13.0,
+        tw,
+        ink,
+    );
+    cv.text_truncated(
+        fonts.regular.as_ref(),
+        &m.artist,
+        tx,
+        y + CARD_PAD + 56,
+        11.5,
+        tw,
+        dim,
+    );
+    // Progress hairline + elapsed/total, when the player reports a length.
+    if let Some((pos, len, pct)) = m.elapsed_label() {
+        let bar_y = y + SQ - 24;
+        let bw = w - CARD_PAD * 2;
+        cv.round_rect(x + CARD_PAD, bar_y, bw, 3, 1.5, Rgba::rgba(0x24, 0x26, 0x2b, 50));
+        cv.round_rect(
+            x + CARD_PAD,
+            bar_y,
+            (bw as f32 * pct) as i32,
+            3,
+            1.5,
+            Rgba::rgb(0xf5, 0x45, 0x36),
+        );
+        cv.text(fonts.regular.as_ref(), &pos, x + CARD_PAD, bar_y + 14, 9.0, dim);
+        let lw = text_width(fonts.regular.as_ref(), &len, 9.0);
+        cv.text(fonts.regular.as_ref(), &len, x + w - CARD_PAD - lw, bar_y + 14, 9.0, dim);
+    }
+}
+
 /// The clock's analog face: light dial, dark hands, red second hand — the
 /// macOS Clock widget. `now` is a parameter so previews and tests can pin it.
 fn paint_clock(cv: &mut Canvas<'_>, fonts: &Fonts, x: i32, y: i32, now: chrono::DateTime<Local>) {
@@ -441,16 +513,18 @@ pub fn paint(
     x: i32,
     y: i32,
 ) {
-    let [(cx, cy, cw, ch), (kx, ky, kw, kh), (wx, wy, ww, wh), (px, py, pw, ph)] =
+    let [(cx, cy, cw, ch), (kx, ky, kw, kh), (wx, wy, ww, wh), (px, py, pw, ph), (mx, my, mw, mh)] =
         card_rects();
     card(cv, slab, x + cx, y + cy, cw, ch);
     card(cv, slab, x + kx, y + ky, kw, kh);
     card(cv, slab, x + wx, y + wy, ww, wh);
     card(cv, slab, x + px, y + py, pw, ph);
+    card(cv, slab, x + mx, y + my, mw, mh);
     paint_cal(cv, fonts, &v.cal, x + cx, y + cy);
     paint_clock(cv, fonts, x + kx, y + ky, Local::now());
     paint_weather(cv, fonts, &v.weather, x + wx, y + wy);
     paint_photos(cv, fonts, v.photo.as_ref(), x + px, y + py);
+    paint_music(cv, fonts, v.media.as_ref(), x + mx, y + my, mw);
 }
 
 #[cfg(test)]
@@ -508,6 +582,7 @@ mod tests {
             cal: cal_of(NaiveDate::from_ymd_opt(2026, 11, 22).unwrap()),
             weather: parse_weather(Some("11\nTokyo\nMostly Sunny\nH:14° L:3°")),
             photo: None,
+            media: None,
         };
         paint(&mut cv, &th, &fonts, &v, &slab, 0, 0);
         // Card bodies paint; clear of every card and its shadow stays empty.

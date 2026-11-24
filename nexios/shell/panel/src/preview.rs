@@ -1198,6 +1198,7 @@ fn widgets_shot(fonts: &Fonts, kind: ThemeKind, wallpaper: &str) -> Shot {
         cal: widgets::cal_of(chrono::NaiveDate::from_ymd_opt(2026, 11, 22).unwrap()),
         weather: widgets::parse_weather(Some("11\nTokyo\nMostly Sunny\nH:14° L:3°")),
         photo: None,
+            media: None,
     };
     let slab = crate::material::slab(mat, th.surface, tint);
     let (sw, sh) = (widgets::W as u32, widgets::H as u32);
@@ -1347,6 +1348,7 @@ fn scene_pixels(
             cal: widgets::cal_of(chrono::NaiveDate::from_ymd_opt(2026, 11, 22).unwrap()),
             weather: widgets::parse_weather(Some("11\nTokyo\nMostly Sunny\nH:14° L:3°")),
             photo: None,
+            media: None,
         };
         let slab = crate::material::slab(dock_m, th.surface, prefs.wall_tint);
         let (sw, sh) = (widgets::W as u32, widgets::H as u32);

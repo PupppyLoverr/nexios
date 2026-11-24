@@ -1649,7 +1649,8 @@ impl App {
         ) else {
             return;
         };
-        let view = widgets::live();
+        let mut view = widgets::live();
+        view.media = self.media.lock().ok().and_then(|g| g.clone());
         let mut cv = Canvas::new(bytes, w, h, scale as i32);
         let slab = material::slab(mat, th.surface, tint);
         widgets::paint(&mut cv, th, &self.fonts, &view, &slab, 0, 0);

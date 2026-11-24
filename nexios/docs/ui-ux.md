@@ -19,7 +19,7 @@ rendered on CPU:
   (~10 px), a hairline divider separating the folder/trash zone at the right.
   Icons are colourful, glossy, squircle-ish — high contrast against any
   wallpaper because the glass behind them is bright and blurred.
-- **Widgets**: stacked glass cards top-left under the bar (calendar, weather),
+- **Widgets**: stacked glass cards top-left under the bar (calendar, clock, weather, photos, music),
   ~16 px radius, semi-transparent, content-first with minimal chrome.
 - **Wallpaper**: full-bleed photography, warm gradients — the bar and dock stay
   legible purely through translucency, not through opaque bands.
@@ -54,7 +54,7 @@ whole Nexios thesis.*
 ## What macOS 27 does that we don't (yet)
 
 - **A real widget layer** on the desktop — now built (`nexios-widgets`:
-  calendar + weather + photos glass cards). Remaining: editing/adding
+  calendar + clock + weather + photos + music glass cards (music tracks the live MPRIS player)). Remaining: editing/adding
   widgets, more card kinds.
 - **Dynamic-island-as-notification-model**: the notch expands for live
   activity. We have the island; theirs proves the pattern scales to a whole
