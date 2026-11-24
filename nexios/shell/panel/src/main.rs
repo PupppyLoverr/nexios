@@ -1379,11 +1379,13 @@ impl App {
             agents_summary,
             hover,
         ));
+        let media_now = self.media.lock().ok().and_then(|m| m.clone());
         overlay!(self.notifs_surface, |cv, hover| draw_notifs(
             &mut cv,
             &th,
             &self.fonts,
             &self.notifs,
+            media_now.as_ref(),
             hover,
         ));
         overlay!(self.island_card, |cv, _hover| draw_island_card(

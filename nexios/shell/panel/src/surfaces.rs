@@ -875,12 +875,14 @@ fn draw_launcher_row(
 
 #[allow(clippy::too_many_arguments)]
 /// The notification centre drawer: full-height card at the right edge,
-/// history of notifications newest-first, Clear All at the top.
+/// history of notifications newest-first, Clear All at the top. With media
+/// playing a Now Playing card sits at the top, as in the real thing.
 pub fn draw_notifs(
     cv: &mut Canvas<'_>,
     th: &Theme,
     fonts: &Fonts,
     notifs: &std::collections::VecDeque<(u64, String)>,
+    media: Option<&crate::media::Media>,
     hover: Option<(f64, f64)>,
 ) -> Vec<Region> {
     let w = cv.width as i32;
@@ -941,19 +943,91 @@ pub fn draw_notifs(
         });
     }
 
+    // Now Playing widget (the real NC's top card): album art, title,
+    // artist and transport controls.
+    let mut y = 58;
+    if let Some(m) = media {
+        let ch = 72;
+        cv.round_rect(12, y, w - 24, ch, 10.0, th.tile);
+        cv.text(
+            fonts.semibold.as_ref(),
+            "NOW PLAYING",
+            22,
+            y + 14,
+            8.5,
+            th.text_dim,
+        );
+        let art = 40;
+        cv.draw_album_art(22, y + 24, art, 9.0);
+        let tx = 22 + art + 10;
+        let tw = w - 24 - tx - 112;
+        cv.text_truncated(
+            fonts.semibold.as_ref(),
+            &m.title,
+            tx,
+            y + 38,
+            11.5,
+            tw.max(20),
+            th.text,
+        );
+        cv.text_truncated(
+            fonts.regular.as_ref(),
+            &m.artist,
+            tx,
+            y + 56,
+            10.5,
+            tw.max(20),
+            th.text_dim,
+        );
+        let btn = 32;
+        let gap = 4;
+        let start = w - 24 - (btn * 3 + gap * 2);
+        for (i, c) in [
+            crate::media::Control::Previous,
+            crate::media::Control::PlayPause,
+            crate::media::Control::Next,
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let bx0 = start + i as i32 * (btn + gap);
+            if hovered(hover, bx0, y + 32, btn, 32) {
+                cv.round_rect(bx0, y + 32, btn, 32, 16.0, th.tile_hover);
+            }
+            let cx = (bx0 + btn / 2) as f32;
+            let cy = (y + 48) as f32;
+            match c {
+                crate::media::Control::Previous => {
+                    cv.icon_skip(cx, cy, 13.0, false, th.text)
+                }
+                crate::media::Control::Next => cv.icon_skip(cx, cy, 13.0, true, th.text),
+                crate::media::Control::PlayPause if m.playing => {
+                    cv.icon_pause(cx, cy, 15.0, th.text)
+                }
+                crate::media::Control::PlayPause => cv.icon_play(cx, cy, 15.0, th.text),
+            }
+            regions.push(Region {
+                x: bx0,
+                y: y + 32,
+                w: btn,
+                h: 32,
+                action: HitAction::Media(c),
+            });
+        }
+        y += ch + 8;
+    }
+
     if notifs.is_empty() {
         cv.text(
             fonts.regular.as_ref(),
             "No Notifications",
             w / 2 - 52,
-            h / 2,
+            if media.is_some() { y + 60 } else { h / 2 },
             13.0,
             th.text_dim,
         );
         return regions;
     }
-
-    let mut y = 58;
     for (ts, text) in notifs.iter().rev() {
         let card_h = 48;
         if y + card_h > h - 12 {
