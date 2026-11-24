@@ -393,6 +393,7 @@ impl ShellPrefs {
                         prefs.brightness = n.clamp(15, 100);
                     }
                 }
+                "dnd" => prefs.dnd_on = v.trim() == "1",
                 "agent_env" => {
                     if let Some(n) = parse_agent_env(v) {
                         prefs.agent_env = n;
@@ -422,6 +423,7 @@ impl ShellPrefs {
             ("theme", Some(self.theme.as_str().into())),
             ("volume", Some(self.volume.to_string())),
             ("brightness", Some(self.brightness.to_string())),
+            ("dnd", Some(if self.dnd_on { "1" } else { "0" }.into())),
             ("agent_env", Some(agent_env_name(self.agent_env).into())),
         ];
         if let Err(err) = nexios_conf::update(&path, &pairs) {

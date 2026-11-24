@@ -440,6 +440,13 @@ pub fn draw_bar(
     let mut edge = time_left - 16;
     edge -= 18;
     let cc_cx = edge as f32 + 9.0;
+    // Focus mode: the bar carries the moon like the real menu bar does.
+    let focus_cx = if prefs.dnd_on {
+        edge -= 6 + 18;
+        Some(edge as f32 + 9.0)
+    } else {
+        None
+    };
     let bat = if let Some(pct) = telem.battery_pct {
         edge -= 6 + 22;
         Some((edge as f32 + 11.0, pct))
@@ -464,6 +471,9 @@ pub fn draw_bar(
         if let Some((cx, pct)) = bat {
             cv.icon_battery(cx, icon_cy + 1.0, pct, sh, sh);
         }
+        if let Some(cx) = focus_cx {
+            cv.icon_moon(cx, icon_cy + 1.0, sh);
+        }
         cv.icon_control_centre(cc_cx, icon_cy + 1.0, sh);
     }
     cv.icon_network(
@@ -478,6 +488,9 @@ pub fn draw_bar(
     if let Some((cx, pct)) = bat {
         let level = if pct <= 15 { th.danger } else { bar_text };
         cv.icon_battery(cx, icon_cy, pct, bar_text, level);
+    }
+    if let Some(cx) = focus_cx {
+        cv.icon_moon(cx, icon_cy, bar_text);
     }
     cv.icon_control_centre(cc_cx, icon_cy, bar_text);
     regions.push(Region {
