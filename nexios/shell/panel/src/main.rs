@@ -2307,6 +2307,7 @@ impl LayerShellHandler for App {
             &mut self.island,
             &mut self.menu,
             &mut self.desk,
+            &mut self.widgets,
         ] {
             if slot.as_ref().is_some_and(|s| &s.layer == layer) {
                 *slot = None;
@@ -2345,6 +2346,7 @@ impl LayerShellHandler for App {
             &mut self.island,
             &mut self.menu,
             &mut self.desk,
+            &mut self.widgets,
         ] {
             if let Some(s) = slot.as_mut().filter(|s| &s.layer == layer) {
                 apply(s);
