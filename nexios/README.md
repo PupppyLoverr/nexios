@@ -67,6 +67,31 @@ preview` writes PNGs). The shell keeps Solyra's agent-runtime file protocol
 under `nexios-*` names, so a hosted personality can plug into the same
 island/approval story later.
 
+**Run it live** (verified on Ubuntu 22.04 x86_64 with niri 26.4 nested on an
+X display):
+
+```sh
+# deps (plus a niri build: cargo install --git https://github.com/YaLTeR/niri.git niri)
+sudo apt install thunar foot wtype swaybg socat
+cd nexios/shell/panel && cargo build --release
+sudo ln -sf "$PWD/target/release/nexios-panel" /usr/local/bin/nexios-panel
+sudo ln -sf ../bin/nexios-open ../bin/nexios-cmd ../bin/nexios-agent-demo /usr/local/bin/
+sudo cp ../nexios-lock.pam /etc/pam.d/nexios-lock          # lock-screen PAM service
+sudo mkdir -p /usr/share/nexios/wallpapers
+sudo cp ../../assets/wallpapers/goldengate-1920x1080.png /usr/share/nexios/wallpapers/goldengate.png
+cp ../niri.kdl ~/.config/niri/config.kdl                    # spawn-at-startup + keybinds
+mkdir -p /tmp/xdg-rt && chmod 700 /tmp/xdg-rt               # only if no XDG_RUNTIME_DIR
+DISPLAY=:0 XDG_RUNTIME_DIR=/tmp/xdg-rt niri                  # nested on X; real session needs neither
+```
+
+Inside niri: Super+Space launches (finds apps, asks agents), Super+Shift+C
+opens the control centre, `nexios-cmd lock` locks. `nexios-agent-demo`
+plays a fake runtime through the island approval loop (see
+`docs/agent-protocol.md`). Desktop widgets (calendar/weather/photos) sit on
+the Bottom layer — read them on an empty workspace; weather comes from
+`~/.config/nexios/weather.txt` (temp, city, condition, `H:x L:y` lines),
+photos shows the newest PNG in `~/Pictures`.
+
 **nx driver**: `nx` builds and runs (help/bad-command verified).
 
 Verified bring-up on stock Ubuntu 24.04/7.0 aarch64 (`7.0.0-38-generic`):
