@@ -181,6 +181,9 @@ pub enum ShellCmd {
     ToggleControl,
     ToggleIsland,
     ToggleAgents,
+    /// Notification centre drawer (history of notifications).
+    ToggleNotifs,
+    ClearNotifs,
     CloseOverlays,
     SetDock(DockStyle),
     SetWallpaper(WallpaperPreset),
@@ -519,6 +522,8 @@ fn parse_cmd_line(raw: &str) -> Option<ShellCmd> {
         "toggle-control" | "control" => Some(ShellCmd::ToggleControl),
         "toggle-island" | "island" => Some(ShellCmd::ToggleIsland),
         "toggle-agents" | "agents" => Some(ShellCmd::ToggleAgents),
+        "toggle-notifs" | "notifs" => Some(ShellCmd::ToggleNotifs),
+        "clear-notifs" => Some(ShellCmd::ClearNotifs),
         "close" => Some(ShellCmd::CloseOverlays),
         "lock" => Some(ShellCmd::Lock),
         _ => None,

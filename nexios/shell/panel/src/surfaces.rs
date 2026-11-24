@@ -432,7 +432,8 @@ pub fn draw_bar(
         y: 0,
         w: clock_x + clock_w + 8 - (time_left - 4),
         h,
-        action: HitAction::Shell(ShellCmd::ToggleIsland),
+        // macOS: clicking the clock/date opens Notification Centre.
+        action: HitAction::Shell(ShellCmd::ToggleNotifs),
     });
 
     // Search, Wi-Fi, volume, battery, control centre — crisp unboxed glyphs.
@@ -873,6 +874,117 @@ fn draw_launcher_row(
 // --------------------------------------------------------- Control Centre
 
 #[allow(clippy::too_many_arguments)]
+/// The notification centre drawer: full-height card at the right edge,
+/// history of notifications newest-first, Clear All at the top.
+pub fn draw_notifs(
+    cv: &mut Canvas<'_>,
+    th: &Theme,
+    fonts: &Fonts,
+    notifs: &std::collections::VecDeque<(u64, String)>,
+    hover: Option<(f64, f64)>,
+) -> Vec<Region> {
+    let w = cv.width as i32;
+    let h = cv.height as i32;
+    let mut regions = Vec::new();
+    card(cv, th, 0, 0, w, h, R_CARD);
+
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+
+    cv.text(
+        fonts.semibold.as_ref(),
+        "Notification Centre",
+        16,
+        26,
+        14.0,
+        th.text,
+    );
+    cv.text(
+        fonts.regular.as_ref(),
+        &chrono::Local::now().format("%A %-d %B").to_string(),
+        16,
+        44,
+        11.0,
+        th.text_dim,
+    );
+    if !notifs.is_empty() {
+        let label = "Clear All";
+        let lw = text_width(fonts.regular.as_ref(), label, 11.0);
+        let bx = w - 16 - lw - 16;
+        let hot = hover.is_some_and(|(hx, hy)| {
+            hx >= bx as f64 && hx <= (bx + lw + 16) as f64 && hy >= 12.0 && hy <= 40.0
+        });
+        cv.round_rect(
+            bx,
+            14,
+            lw + 16,
+            24,
+            12.0,
+            if hot { th.tile_hover } else { th.tile },
+        );
+        cv.text(
+            fonts.regular.as_ref(),
+            label,
+            bx + 8,
+            30,
+            11.0,
+            th.accent,
+        );
+        regions.push(Region {
+            x: bx,
+            y: 14,
+            w: lw + 16,
+            h: 24,
+            action: HitAction::Shell(ShellCmd::ClearNotifs),
+        });
+    }
+
+    if notifs.is_empty() {
+        cv.text(
+            fonts.regular.as_ref(),
+            "No Notifications",
+            w / 2 - 52,
+            h / 2,
+            13.0,
+            th.text_dim,
+        );
+        return regions;
+    }
+
+    let mut y = 58;
+    for (ts, text) in notifs.iter().rev() {
+        let card_h = 48;
+        if y + card_h > h - 12 {
+            break;
+        }
+        cv.round_rect(12, y, w - 24, card_h, 10.0, th.tile);
+        let age = now.saturating_sub(*ts);
+        let ago = if age < 60 {
+            "just now".to_string()
+        } else if age < 3600 {
+            format!("{}m ago", age / 60)
+        } else if age < 86400 {
+            format!("{}h ago", age / 3600)
+        } else {
+            format!("{}d ago", age / 86400)
+        };
+        cv.text(fonts.regular.as_ref(), &ago, 20, y + 16, 9.5, th.text_dim);
+        cv.text_truncated(
+            fonts.regular.as_ref(),
+            text,
+            20,
+            y + 34,
+            11.5,
+            w - 40,
+            th.text,
+        );
+        y += card_h + 6;
+    }
+    regions
+}
+
 pub fn draw_control(
     cv: &mut Canvas<'_>,
     th: &Theme,

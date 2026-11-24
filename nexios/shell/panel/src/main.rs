@@ -34,9 +34,9 @@ mod widgets;
 #[cfg(test)]
 mod preview;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use canvas::{Canvas, Fonts, Icon};
 use smithay_client_toolkit::compositor::{CompositorHandler, CompositorState};
@@ -58,9 +58,9 @@ use state::{
     WindowInfo,
 };
 use surfaces::{
-    draw_agents, draw_bar, draw_control, draw_island_card, draw_launcher, spot_layout, AgentsView,
-    HitAction, Live, Region, AGENTS_H, AGENTS_W, BAR_HEIGHT, CONTROL_H, CONTROL_W, ISLAND_CARD_H,
-    ISLAND_CARD_W,
+    draw_agents, draw_bar, draw_control, draw_island_card, draw_launcher, draw_notifs,
+    spot_layout, AgentsView, HitAction, Live, Region, AGENTS_H, AGENTS_W, BAR_HEIGHT, CONTROL_H,
+    CONTROL_W, ISLAND_CARD_H, ISLAND_CARD_W,
 };
 use tokens::Theme;
 use wayland_client::globals::registry_queue_init;
@@ -214,6 +214,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         waker: waker.clone(),
         launcher: None,
         control: None,
+        notifs_surface: None,
+        notifs: VecDeque::new(),
         island_card: None,
         agents: None,
         desk: None,
@@ -449,6 +451,10 @@ struct App {
     waker: Arc<dyn Fn() + Send + Sync>,
     launcher: Option<SurfaceSlot>,
     control: Option<SurfaceSlot>,
+    /// Notification centre drawer (Layer Overlay, right edge).
+    notifs_surface: Option<SurfaceSlot>,
+    /// Recent notifications, newest last; the island shows the newest.
+    notifs: VecDeque<(u64, String)>,
     island_card: Option<SurfaceSlot>,
     agents: Option<SurfaceSlot>,
     /// Right-side desk card when desktop mode is Agent workspace.
@@ -542,6 +548,7 @@ impl App {
     fn close_overlays(&mut self) {
         self.launcher = None;
         self.control = None;
+        self.notifs_surface = None;
         self.island_card = None;
         self.agents = None;
         self.agents_error = None;
@@ -582,15 +589,47 @@ impl App {
     fn apply_shell_cmd(&mut self, cmd: ShellCmd) {
         match cmd {
             ShellCmd::Notify(text) => {
-                if text.trim().is_empty() {
+                let text = text.trim().to_string();
+                if text.is_empty() {
                     self.island_override = None;
-                } else if self.prefs.dnd_on {
-                    // Focus is on: hold plain messages. Agent approvals come
-                    // from the protocol, not from here, and are never muted.
                 } else {
-                    self.island_override = Some((Instant::now(), text));
+                    // The centre keeps history even when Focus holds the
+                    // banner back, like macOS Notification Centre.
+                    let ts = SystemTime::now()
+                        .duration_since(UNIX_EPOCH)
+                        .map(|d| d.as_secs())
+                        .unwrap_or(0);
+                    if self.notifs.back() != Some(&(ts, text.clone())) {
+                        self.notifs.push_back((ts, text.clone()));
+                        while self.notifs.len() > 30 {
+                            self.notifs.pop_front();
+                        }
+                    }
+                    if !self.prefs.dnd_on {
+                        self.island_override = Some((Instant::now(), text));
+                    }
                 }
                 self.island_card = None;
+            }
+            ShellCmd::ToggleNotifs => {
+                if self.notifs_surface.is_some() {
+                    self.notifs_surface = None;
+                } else {
+                    self.close_overlays();
+                    // Full-height right-edge drawer; height 0 stretches
+                    // between the TOP and BOTTOM anchors.
+                    self.notifs_surface = Some(self.open_overlay(
+                        "nexios-notifs",
+                        Anchor::TOP | Anchor::RIGHT | Anchor::BOTTOM,
+                        (8, 10, 8, 0),
+                        (340, 0),
+                        KeyboardInteractivity::OnDemand,
+                    ));
+                }
+            }
+            ShellCmd::ClearNotifs => {
+                self.notifs.clear();
+                self.needs_redraw = true;
             }
             ShellCmd::ToggleLauncher => {
                 if self.launcher.is_some() {
@@ -1340,6 +1379,13 @@ impl App {
             agents_summary,
             hover,
         ));
+        overlay!(self.notifs_surface, |cv, hover| draw_notifs(
+            &mut cv,
+            &th,
+            &self.fonts,
+            &self.notifs,
+            hover,
+        ));
         overlay!(self.island_card, |cv, _hover| draw_island_card(
             &mut cv,
             &th,
@@ -1697,6 +1743,7 @@ impl App {
         [
             &self.launcher,
             &self.control,
+            &self.notifs_surface,
             &self.island_card,
             &self.agents,
             &self.desk,
@@ -2323,6 +2370,7 @@ impl LayerShellHandler for App {
         for slot in [
             &mut self.launcher,
             &mut self.control,
+            &mut self.notifs_surface,
             &mut self.island_card,
             &mut self.agents,
             &mut self.island,
@@ -2362,6 +2410,7 @@ impl LayerShellHandler for App {
         for slot in [
             &mut self.launcher,
             &mut self.control,
+            &mut self.notifs_surface,
             &mut self.island_card,
             &mut self.agents,
             &mut self.island,
