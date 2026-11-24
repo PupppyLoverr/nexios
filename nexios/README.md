@@ -29,6 +29,9 @@ screen, one input stack, one audit trail, and nothing else.
 
 - [`docs/ui-ux.md`](docs/ui-ux.md) — what macOS 27 "Golden Gate" does well,
   observed from the hosted desktop, and how to borrow the *ideas* legally.
+- [`docs/solyra-modes-map.md`](docs/solyra-modes-map.md) — the extraction
+  applied to every Solyra mode (dock variants, materials, island, launcher,
+  lock, desktop): at-parity vs real gaps.
 - [`docs/take-map.md`](docs/take-map.md) — component-by-component map of what
   can be reused elsewhere (the GPU bridge recipe is the biggest prize).
 - [`docs/architecture.md`](docs/architecture.md) — the Space model: how hosted
@@ -54,3 +57,9 @@ screen, one input stack, one audit trail, and nothing else.
 Experiment scaffolding: documents and the `nx` driver skeleton. Upstream code
 is unmodified; the fork tracks `AFK-surf/xnulinux@main` and should rebase, not
 diverge, until a Nexios-specific change earns its place.
+
+Verified bring-up on stock Ubuntu 24.04/7.0 aarch64 (`7.0.0-38-generic`):
+`fki.ko` and `xnu.ko` compile out-of-tree against the running headers and
+`fki.ko` insmods/rmmods cleanly. A hosted-macOS boot still needs an arm64
+host with 16 GB+ RAM (no nested-virt barrier — an Apple VZ guest can't run
+VZ guests) and a macOS 27 disk made by Apple's installer on a Mac with Xcode.
