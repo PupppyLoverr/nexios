@@ -78,7 +78,9 @@ Clicking the bar's clock/date (or `nexios-cmd toggle-notifs`) opens a
 right-edge drawer, like macOS: "Notification Centre", today's date, a
 Clear All pill, a Now Playing card at the top when media is playing
 (transport buttons drive the real player over MPRIS), and notification
-history newest-first ("just now" / "1m ago"). History is capped at 30 and
+history newest-first: each card carries the sending app's icon and name
+plus a relative timestamp ("just now" / "1m ago"), like the real centre's
+per-app cards. History is capped at 30 and
 deduped; Focus mode still hides the island banner but the centre keeps
 recording. `nexios-cmd clear-notifs` empties it; `nexios-cmd notifs`
 lists the backlog for scripted checks.

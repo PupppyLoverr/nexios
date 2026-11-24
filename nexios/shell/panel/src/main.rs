@@ -455,7 +455,8 @@ struct App {
     /// Notification centre drawer (Layer Overlay, right edge).
     notifs_surface: Option<SurfaceSlot>,
     /// Recent notifications, newest last; the island shows the newest.
-    notifs: VecDeque<(u64, String)>,
+    /// Each entry: (unix seconds, sending app, display line).
+    notifs: VecDeque<(u64, String, String)>,
     island_card: Option<SurfaceSlot>,
     agents: Option<SurfaceSlot>,
     /// Right-side desk card when desktop mode is Agent workspace.
@@ -589,7 +590,7 @@ impl App {
 
     fn apply_shell_cmd(&mut self, cmd: ShellCmd) {
         match cmd {
-            ShellCmd::Notify(text) => {
+            ShellCmd::Notify(app, text) => {
                 let text = text.trim().to_string();
                 if text.is_empty() {
                     self.island_override = None;
@@ -600,8 +601,8 @@ impl App {
                         .duration_since(UNIX_EPOCH)
                         .map(|d| d.as_secs())
                         .unwrap_or(0);
-                    if self.notifs.back() != Some(&(ts, text.clone())) {
-                        self.notifs.push_back((ts, text.clone()));
+                    if self.notifs.back() != Some(&(ts, app.clone(), text.clone())) {
+                        self.notifs.push_back((ts, app.clone(), text.clone()));
                         while self.notifs.len() > 30 {
                             self.notifs.pop_front();
                         }

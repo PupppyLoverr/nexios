@@ -881,7 +881,7 @@ pub fn draw_notifs(
     cv: &mut Canvas<'_>,
     th: &Theme,
     fonts: &Fonts,
-    notifs: &std::collections::VecDeque<(u64, String)>,
+    notifs: &std::collections::VecDeque<(u64, String, String)>,
     media: Option<&crate::media::Media>,
     hover: Option<(f64, f64)>,
 ) -> Vec<Region> {
@@ -1028,7 +1028,7 @@ pub fn draw_notifs(
         );
         return regions;
     }
-    for (ts, text) in notifs.iter().rev() {
+    for (ts, app, text) in notifs.iter().rev() {
         let card_h = 48;
         if y + card_h > h - 12 {
             break;
@@ -1044,14 +1044,29 @@ pub fn draw_notifs(
         } else {
             format!("{}d ago", age / 86400)
         };
-        cv.text(fonts.regular.as_ref(), &ago, 20, y + 16, 9.5, th.text_dim);
+        // App icon and name, like the real centre's per-app cards.
+        cv.draw_app_squircle(20, y + 7, 34, app, None, fonts);
+        let tx = 62;
+        if !app.is_empty() {
+            cv.text_tracked(
+                fonts.semibold.as_ref(),
+                &app.to_uppercase(),
+                tx,
+                y + 14,
+                8.5,
+                0.5,
+                th.text_dim,
+            );
+        }
+        let aw = text_width(fonts.regular.as_ref(), &ago, 9.5);
+        cv.text(fonts.regular.as_ref(), &ago, w - 20 - aw, y + 14, 9.5, th.text_dim);
         cv.text_truncated(
             fonts.regular.as_ref(),
             text,
-            20,
-            y + 34,
+            tx,
+            y + 33,
             11.5,
-            w - 40,
+            w - 24 - tx - 8,
             th.text,
         );
         y += card_h + 6;

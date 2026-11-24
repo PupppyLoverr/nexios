@@ -176,7 +176,8 @@ impl WallpaperMode {
 
 #[derive(Clone, Debug)]
 pub enum ShellCmd {
-    Notify(String),
+    /// (sending app, display line); an empty line dismisses the banner.
+    Notify(String, String),
     ToggleLauncher,
     ToggleControl,
     ToggleIsland,
@@ -496,7 +497,7 @@ where
 fn parse_cmd_line(raw: &str) -> Option<ShellCmd> {
     let s = raw.trim();
     if let Some(rest) = s.strip_prefix("notify ") {
-        return Some(ShellCmd::Notify(rest.trim().to_string()));
+        return Some(ShellCmd::Notify("Shell".into(), rest.trim().to_string()));
     }
     if let Some(rest) = s.strip_prefix("dock ") {
         return DockStyle::parse(rest).map(ShellCmd::SetDock);
@@ -1341,7 +1342,7 @@ mod tests {
             Some(ShellCmd::ToggleAgents)
         ));
         assert!(
-            matches!(parse_cmd_line("notify hi there"), Some(ShellCmd::Notify(t)) if t == "hi there")
+            matches!(parse_cmd_line("notify hi there"), Some(ShellCmd::Notify(_, t)) if t == "hi there")
         );
         assert!(parse_cmd_line("rm -rf /").is_none());
     }
