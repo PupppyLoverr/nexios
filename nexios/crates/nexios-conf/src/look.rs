@@ -224,8 +224,9 @@ impl Look {
         match (self.clock_24h, self.show_seconds) {
             (true, false) => "%H:%M",
             (true, true) => "%H:%M:%S",
-            (false, false) => "%-I:%M%p",
-            (false, true) => "%-I:%M:%S%p",
+            // A space before AM/PM, as the real menu bar writes it.
+            (false, false) => "%-I:%M %p",
+            (false, true) => "%-I:%M:%S %p",
         }
     }
 }
@@ -274,7 +275,7 @@ mod tests {
     #[test]
     fn clock_formats() {
         let mut l = Look::default();
-        assert_eq!(l.clock_format(), "%-I:%M%p");
+        assert_eq!(l.clock_format(), "%-I:%M %p");
         l.clock_24h = true;
         l.show_seconds = true;
         assert_eq!(l.clock_format(), "%H:%M:%S");
