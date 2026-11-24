@@ -26,6 +26,7 @@ binds {
     Mod+D { spawn-sh "nexios-cmd toggle-launcher"; }
     Mod+Shift+C { spawn-sh "nexios-cmd toggle-control"; }
     Mod+Shift+A { spawn-sh "nexios-cmd toggle-agents"; }
+    Mod+Shift+N { spawn-sh "nexios-cmd toggle-notifs"; }
     Mod+Escape { spawn-sh "nexios-cmd close"; }
 }
 

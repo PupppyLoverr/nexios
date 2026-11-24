@@ -72,6 +72,17 @@ whole Nexios thesis.*
   pixel-identical menu bar + dock + icons could read as trade-dress. Solyra's
   iris identity is the differentiator.
 
+## Notification centre
+
+Clicking the bar's clock/date (or `nexios-cmd toggle-notifs`) opens a
+right-edge drawer, like macOS: "Notification Centre", today's date, a
+Clear All pill, a Now Playing card at the top when media is playing
+(transport buttons drive the real player over MPRIS), and notification
+history newest-first ("just now" / "1m ago"). History is capped at 30 and
+deduped; Focus mode still hides the island banner but the centre keeps
+recording. `nexios-cmd clear-notifs` empties it; `nexios-cmd notifs`
+lists the backlog for scripted checks.
+
 ## Lock screen
 
 `nexios-cmd lock` (or the Nexios menu) spawns `nexios-panel lock` — a
