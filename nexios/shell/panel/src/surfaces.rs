@@ -55,6 +55,8 @@ impl Region {
 pub enum HitAction {
     Workspace(u8),
     FocusWindow(u64),
+    /// niri CloseWindow on a specific window (dock context "Quit").
+    CloseWindow(u64),
     Launch(LaunchTarget),
     Shell(ShellCmd),
     ToggleDnd,

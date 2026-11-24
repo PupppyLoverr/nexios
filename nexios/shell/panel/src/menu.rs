@@ -83,6 +83,63 @@ fn sep() -> Entry {
     }
 }
 
+/// One row of the dock icon context menu (built in main.rs).
+pub fn ctx_item(label: String, action: HitAction) -> Entry {
+    Entry {
+        label,
+        shortcut: None,
+        action: Some(action),
+        confirm: None,
+    }
+}
+
+/// A separator row in the dock context menu.
+pub fn ctx_sep() -> Entry {
+    sep()
+}
+
+/// The dock's right-click card: a small floating column of menu rows.
+pub fn draw_ctx(
+    cv: &mut Canvas<'_>,
+    th: &Theme,
+    fonts: &Fonts,
+    entries: &[Entry],
+    hover: Option<(f64, f64)>,
+) -> Vec<Region> {
+    let w = cv.width as i32;
+    let h = cv.height as i32;
+    let mut regions = Vec::new();
+    cv.round_rect_shadow(0, 0, w, h, 12.0, 9.0, 26.0, 46);
+    cv.round_rect(0, 0, w, h, 12.0, th.surface);
+    cv.stroke_round_rect(0, 0, w, h, 12.0, 1.0, th.hairline);
+    let mut y = PAD;
+    for e in entries {
+        let Some(action) = &e.action else {
+            cv.fill_rect(12, y + SEP_H / 2, w - 24, 1, th.separator);
+            y += SEP_H;
+            continue;
+        };
+        let (rx, rw) = (5, w - 10);
+        let hov = hover.is_some_and(|(hx, hy)| {
+            hx >= rx as f64 && hx < (rx + rw) as f64 && hy >= y as f64 && hy < (y + ROW_H) as f64
+        });
+        if hov {
+            cv.round_rect(rx, y, rw, ROW_H, 6.0, th.accent);
+        }
+        let fg = if hov { th.on_accent } else { th.text };
+        cv.text(fonts.regular.as_ref(), &e.label, rx + 12, y + 19, T_LABEL + 0.5, fg);
+        regions.push(Region {
+            x: rx,
+            y,
+            w: rw,
+            h: ROW_H,
+            action: action.clone(),
+        });
+        y += ROW_H;
+    }
+    regions
+}
+
 fn ipc(json: &'static str) -> HitAction {
     HitAction::Launch(LaunchTarget::Ipc(json))
 }

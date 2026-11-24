@@ -216,6 +216,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         control: None,
         notifs_surface: None,
         notifs: VecDeque::new(),
+        dock_ctx: None,
+        dock_ctx_entries: Vec::new(),
         island_card: None,
         agents: None,
         desk: None,
@@ -457,6 +459,9 @@ struct App {
     /// Recent notifications, newest last; the island shows the newest.
     /// Each entry: (unix seconds, sending app, display line).
     notifs: VecDeque<(u64, String, String)>,
+    /// Dock icon context menu (right-click): surface and its rows.
+    dock_ctx: Option<SurfaceSlot>,
+    dock_ctx_entries: Vec<menu::Entry>,
     island_card: Option<SurfaceSlot>,
     agents: Option<SurfaceSlot>,
     /// Right-side desk card when desktop mode is Agent workspace.
@@ -551,6 +556,8 @@ impl App {
         self.launcher = None;
         self.control = None;
         self.notifs_surface = None;
+        self.dock_ctx = None;
+        self.dock_ctx_entries.clear();
         self.island_card = None;
         self.agents = None;
         self.agents_error = None;
@@ -1464,6 +1471,14 @@ impl App {
             ));
         }
 
+        overlay!(self.dock_ctx, |cv, hover| menu::draw_ctx(
+            &mut cv,
+            &th,
+            &self.fonts,
+            &self.dock_ctx_entries,
+            hover
+        ));
+
         self.draw_island(scale);
         self.draw_desk(scale, &th);
         self.draw_widgets(scale, &th);
@@ -1752,6 +1767,7 @@ impl App {
             &self.island_card,
             &self.agents,
             &self.desk,
+            &self.dock_ctx,
         ]
         .into_iter()
         .flatten()
@@ -1760,6 +1776,14 @@ impl App {
     }
 
     fn handle_click(&mut self, surface: &WlSurface, x: f64, y: f64) {
+        // The dock context card: a click anywhere else dismisses it and
+        // does not act on what it landed on, like macOS.
+        if let Some(ctx) = &self.dock_ctx {
+            if &ctx.surface != surface {
+                self.dock_ctx = None;
+                return;
+            }
+        }
         let on_island = self.island.as_ref().is_some_and(|s| &s.surface == surface);
         let on_menu = self.menu.as_ref().is_some_and(|s| &s.surface == surface);
         let hit = if on_island {
@@ -1784,6 +1808,13 @@ impl App {
             }
             return;
         };
+        if self
+            .dock_ctx
+            .as_ref()
+            .is_some_and(|s| &s.surface == surface)
+        {
+            self.dock_ctx = None;
+        }
 
         match hit {
             HitAction::Workspace(idx) => {
@@ -1797,6 +1828,11 @@ impl App {
                     "{{\"Action\":{{\"FocusWindow\":{{\"id\":{id}}}}}}}"
                 ));
                 self.launcher = None;
+            }
+            HitAction::CloseWindow(id) => {
+                send_ipc(&format!(
+                    "{{\"Action\":{{\"CloseWindow\":{{\"id\":{id}}}}}}}"
+                ));
             }
             HitAction::Launch(target) => {
                 self.execute_launch(target);
@@ -1916,6 +1952,58 @@ impl App {
             self.close_overlays();
         }
         self.needs_state_sync = true;
+        self.needs_redraw = true;
+    }
+
+    /// Right-click on a dock icon: the real dock's context card — Open,
+    /// plus Quit for a running app. Positioned directly above the icon.
+    fn handle_right_click(&mut self, surface: &WlSurface, x: f64, y: f64) {
+        if &self.dock.surface != surface {
+            return;
+        }
+        let Some(region) = self.dock.regions.iter().find(|r| r.contains(x, y)) else {
+            return;
+        };
+        let icon_cx = region.x + region.w / 2;
+        let mut entries = Vec::new();
+        match region.action.clone() {
+            HitAction::FocusWindow(id) => {
+                entries.push(menu::ctx_item("Open".into(), HitAction::FocusWindow(id)));
+                entries.push(menu::ctx_sep());
+                entries.push(menu::ctx_item("Quit".into(), HitAction::CloseWindow(id)));
+            }
+            HitAction::Launch(t) => {
+                entries.push(menu::ctx_item("Open".into(), HitAction::Launch(t)));
+            }
+            _ => return,
+        }
+        let (mw, mh) = menu::panel_size(&self.fonts, &entries);
+        // The dock is centred on the output: recover the icon's global x.
+        let out_w = self
+            .output_state
+            .outputs()
+            .filter_map(|o| self.output_state.info(&o))
+            .filter_map(|i| i.logical_size.map(|(w, _)| w))
+            .max()
+            .unwrap_or(0);
+        let spec = dock::spec(
+            self.prefs.dock_style,
+            &self.wins,
+            self.prefs.look.dock_magnify,
+            self.dock_hidden,
+        );
+        let global_cx = ((out_w - spec.width as i32) / 2).max(0) + icon_cx;
+        let left = (global_cx - mw / 2).clamp(8, (out_w - mw - 8).max(8));
+        let bottom = spec.bottom_margin + spec.height as i32 + 6;
+        let slot = self.open_overlay(
+            "nexios-dock-ctx",
+            Anchor::BOTTOM | Anchor::LEFT,
+            (0, 0, bottom, left),
+            (mw as u32, mh as u32),
+            KeyboardInteractivity::OnDemand,
+        );
+        self.dock_ctx = Some(slot);
+        self.dock_ctx_entries = entries;
         self.needs_redraw = true;
     }
 
@@ -2422,6 +2510,7 @@ impl LayerShellHandler for App {
             &mut self.menu,
             &mut self.desk,
             &mut self.widgets,
+            &mut self.dock_ctx,
         ] {
             if let Some(s) = slot.as_mut().filter(|s| &s.layer == layer) {
                 apply(s);
@@ -2555,6 +2644,11 @@ impl PointerHandler for App {
                     let surface = event.surface.clone();
                     let (x, y) = event.position;
                     self.handle_click(&surface, x, y);
+                }
+                PointerEventKind::Press { button, .. } if *button == 0x111 => {
+                    let surface = event.surface.clone();
+                    let (x, y) = event.position;
+                    self.handle_right_click(&surface, x, y);
                 }
                 _ => {}
             }
