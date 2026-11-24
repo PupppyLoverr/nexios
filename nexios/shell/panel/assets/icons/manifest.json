@@ -1,0 +1,21 @@
+{
+  "source": "first-party Nexios artwork (generated icon sheets, assets/icons-src/)",
+  "icons": {
+    "files": "blue squircle, white folder",
+    "terminal": "graphite squircle, prompt chevron + cursor",
+    "browser": "teal squircle, globe",
+    "settings": "grey squircle, gear",
+    "overview": "violet squircle, window grid",
+    "editor": "amber squircle, pencil on document",
+    "trash": "slate squircle, open trash bin",
+    "calculator": "indigo squircle, calculator",
+    "music": "rose squircle, musical note",
+    "photos": "sunset squircle, four-petal flower",
+    "mail": "sky-blue squircle, envelope",
+    "appstore": "mint squircle, shopping bag with star",
+    "monitor": "steel-blue squircle, monitor with chart",
+    "notes": "yellow squircle, lined notepad",
+    "maps": "green squircle, folded map with pin",
+    "wallpaper": "ocean-blue squircle, sun over mountains"
+  }
+}

@@ -1,0 +1,24 @@
+[package]
+name = "nexios-panel"
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0-only"
+description = "Nexios panel: the first layer-shell surface of the shell (P3 spike)"
+
+[dependencies]
+nexios-tokens = { path = "../../crates/nexios-tokens" }
+nexios-conf = { path = "../../crates/nexios-conf" }
+calloop = "0.14"
+wayland-client = "0.31"
+wayland-protocols = { version = "0.32", features = ["client", "staging"] }
+smithay-client-toolkit = { version = "0.20", default-features = false, features = ["calloop", "xkbcommon"] }
+ab_glyph = "0.2"
+png = "0.17"
+serde_json = "1"
+dbus = "0.9"
+dbus-crossroads = "0.5"
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
+
+[profile.release]
+strip = true
+lto = "thin"

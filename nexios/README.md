@@ -23,6 +23,9 @@ screen, one input stack, one audit trail, and nothing else.
 | `gpu/` | The Metal→Vulkan→DRM GPU bridge (Venus path + lavapipe fallback). |
 | `scripts/`, `tools/` | Upstream bring-up tooling. |
 | `nx/` | The Nexios driver: one CLI (`build`/`disk`/`boot`/`console`/`screenshot`/`test`) — upstream's own stated "replace ~30 scripts" direction, started here. |
+| `nexios/shell/panel/` | `nexios-panel`: the Nexios shell, ported from Solyra's `solyra-panel` — Finder-style top bar, floating dock (plus minimal/taskbar variants), launcher, island, lock. Original icons, `nX` mark, nexios-* namespaces. |
+| `nexios/crates/` | `nexios-tokens` (design tokens) and `nexios-conf` (config parsing) powering the shell. |
+| `nexios/assets/wallpapers/` | The wallpaper set the shell references (perihelion + presets). |
 | `nexios/docs/` | The experiment's own documents (below). |
 
 ## Documents
@@ -54,9 +57,17 @@ screen, one input stack, one audit trail, and nothing else.
 
 ## Status
 
-Experiment scaffolding: documents and the `nx` driver skeleton. Upstream code
-is unmodified; the fork tracks `AFK-surf/xnulinux@main` and should rebase, not
-diverge, until a Nexios-specific change earns its place.
+Upstream code is unmodified; the fork tracks `AFK-surf/xnulinux@main` and
+should rebase, not diverge, until a Nexios-specific change earns its place.
+
+**Shell port (verified)**: `nexios-panel` builds and passes all 105 tests on
+stock Ubuntu 24.04/7.0 aarch64 — top bar, dock, launcher, island, agent
+approval cards and lock render correctly (`NEXIOS_RENDER_DIR=… cargo test
+preview` writes PNGs). The shell keeps Solyra's agent-runtime file protocol
+under `nexios-*` names, so a hosted personality can plug into the same
+island/approval story later.
+
+**nx driver**: `nx` builds and runs (help/bad-command verified).
 
 Verified bring-up on stock Ubuntu 24.04/7.0 aarch64 (`7.0.0-38-generic`):
 `fki.ko` and `xnu.ko` compile out-of-tree against the running headers and
