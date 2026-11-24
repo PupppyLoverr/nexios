@@ -1974,7 +1974,18 @@ impl App {
                 entries.push(menu::ctx_item("Quit".into(), HitAction::CloseWindow(id)));
             }
             HitAction::Launch(t) => {
+                let is_trash = matches!(&t, LaunchTarget::Shell(c) if c.contains("trash:///"));
                 entries.push(menu::ctx_item("Open".into(), HitAction::Launch(t)));
+                if is_trash {
+                    entries.push(menu::ctx_sep());
+                    entries.push(menu::ctx_item(
+                        "Empty Trash".into(),
+                        HitAction::Launch(LaunchTarget::Shell(
+                            "rm -rf ~/.local/share/Trash/files/* ~/.local/share/Trash/info/*"
+                                .into(),
+                        )),
+                    ));
+                }
             }
             _ => return,
         }
