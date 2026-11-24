@@ -633,12 +633,19 @@ pub fn ipc(request: &str) -> Option<String> {
     let path = niri_socket()?;
     let mut stream = UnixStream::connect(path).ok()?;
     stream
-        .set_read_timeout(Some(Duration::from_millis(350)))
+        .set_read_timeout(Some(Duration::from_millis(1500)))
         .ok()?;
     stream.write_all(request.as_bytes()).ok()?;
     stream.write_all(b"\n").ok()?;
+    // niri answers one line of JSON and keeps the socket open — read up to
+    // the newline, not to EOF (read_to_string would hit the timeout and
+    // return nothing).
+    let mut reader = BufReader::new(stream);
     let mut reply = String::new();
-    stream.read_to_string(&mut reply).ok()?;
+    let n = reader.read_line(&mut reply).ok()?;
+    if n == 0 {
+        return None;
+    }
     Some(reply)
 }
 
