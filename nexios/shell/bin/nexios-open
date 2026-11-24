@@ -1,0 +1,20 @@
+#!/bin/sh
+# nexios-open <target> [arg...] — how the shell launches things.
+# `files` and `terminal` name the file manager and terminal of the day;
+# anything else is treated as an app id and launched by its desktop entry.
+case "$1" in
+    files)
+        shift
+        if [ $# -gt 0 ]; then
+            exec thunar "$@"
+        else
+            exec thunar "$HOME"
+        fi ;;
+    terminal)
+        exec foot ;;
+    *)
+        if [ -n "$1" ]; then
+            exec gio launch "/usr/share/applications/$1.desktop" 2>/dev/null \
+                || exec "$1"
+        fi ;;
+esac
