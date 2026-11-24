@@ -54,7 +54,9 @@ impl DockStyle {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum WallpaperPreset {
-    /// Nexios Perihelion — the signature iris-dawn artwork, the default.
+    /// Golden Gate — the bridge at warm dusk, the default.
+    GoldenGate,
+    /// Nexios Perihelion — the signature iris-dawn artwork.
     Perihelion,
     /// Unsplash beach photograph.
     Beach,
@@ -66,7 +68,8 @@ pub enum WallpaperPreset {
 }
 
 impl WallpaperPreset {
-    pub const ALL: [Self; 7] = [
+    pub const ALL: [Self; 8] = [
+        Self::GoldenGate,
         Self::Perihelion,
         Self::Beach,
         Self::Ocean,
@@ -78,6 +81,7 @@ impl WallpaperPreset {
 
     pub fn as_str(self) -> &'static str {
         match self {
+            Self::GoldenGate => "goldengate",
             Self::Perihelion => "perihelion",
             Self::Beach => "beach",
             Self::Violet => "violet",
@@ -90,6 +94,7 @@ impl WallpaperPreset {
 
     pub fn label(self) -> &'static str {
         match self {
+            Self::GoldenGate => "Golden Gate",
             Self::Perihelion => "Perihelion",
             Self::Beach => "Beach",
             Self::Violet => "Violet",
@@ -102,6 +107,7 @@ impl WallpaperPreset {
 
     pub fn swatch(self) -> Rgba {
         match self {
+            Self::GoldenGate => Rgba::rgb(0xf0, 0x7d, 0x3e),
             Self::Perihelion => Rgba::rgb(0x6f, 0x66, 0xff),
             Self::Beach => Rgba::rgb(0x3b, 0x9e, 0xd8),
             Self::Violet => Rgba::rgb(0xa8, 0x55, 0xf7),
@@ -114,6 +120,7 @@ impl WallpaperPreset {
 
     pub fn parse(raw: &str) -> Option<Self> {
         match raw.trim().to_ascii_lowercase().as_str() {
+            "goldengate" | "golden-gate" | "golden gate" | "gate" => Some(Self::GoldenGate),
             "perihelion" | "iris" => Some(Self::Perihelion),
             "beach" | "splash" => Some(Self::Beach),
             "violet" => Some(Self::Violet),
@@ -275,10 +282,10 @@ impl Default for ShellPrefs {
     fn default() -> Self {
         Self {
             dock_style: DockStyle::Floating,
-            wallpaper: WallpaperPreset::Perihelion,
+            wallpaper: WallpaperPreset::GoldenGate,
             wallpaper_file: None,
             wallpaper_mode: WallpaperMode::Fill,
-            theme: ThemeKind::Dark,
+            theme: ThemeKind::Light,
             dnd_on: false,
             volume: 76,
             brightness: 84,

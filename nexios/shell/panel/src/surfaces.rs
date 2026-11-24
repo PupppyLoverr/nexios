@@ -232,7 +232,9 @@ pub fn draw_bar(
 
     if menubar {
         // SF-weight hierarchy: focused app name in Semibold, menus in Regular.
-        let (app_name, _) = focused_app_menus(wins);
+        // The focused app's own title list: File Edit View Go Window Help for
+        // the file manager, Shell Edit View Window Help for the terminal.
+        let (app_name, menu_titles) = focused_app_menus(wins);
         let app_size = 13.0;
         let aw = text_width(fonts.semibold.as_ref(), &app_name, app_size);
         if hovered(hover, x - 6, 0, aw + 12, h) {
@@ -256,8 +258,7 @@ pub fn draw_bar(
         });
         x += aw + 18;
         let menu_size = 13.0;
-        for id in MenuId::TITLES {
-            let t = id.title();
+        for t in menu_titles {
             let mw = text_width(fonts.regular.as_ref(), t, menu_size);
             if x + mw + 8 > max_left_x {
                 break;
@@ -275,13 +276,16 @@ pub fn draw_bar(
                 menu_size,
                 if hot { bar_text } else { bar_menu_text },
             );
-            regions.push(Region {
-                x: x - 6,
-                y: 0,
-                w: mw + 12,
-                h,
-                action: HitAction::OpenMenu(id),
-            });
+            // A title the shell has no menu for stays visible but inert.
+            if let Some(id) = MenuId::parse(t) {
+                regions.push(Region {
+                    x: x - 6,
+                    y: 0,
+                    w: mw + 12,
+                    h,
+                    action: HitAction::OpenMenu(id),
+                });
+            }
             x += mw + 18;
         }
         x += 6;

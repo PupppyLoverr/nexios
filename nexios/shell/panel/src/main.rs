@@ -29,6 +29,7 @@ mod pam;
 mod state;
 mod surfaces;
 mod tokens;
+mod widgets;
 
 #[cfg(test)]
 mod preview;
@@ -217,6 +218,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         agents: None,
         desk: None,
         desk_material: material::Material::Solid,
+        widgets: None,
+        widgets_material: material::Material::Solid,
         menu: None,
         menu_open: None,
         menu_armed: None,
@@ -265,6 +268,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     app.ensure_island();
     app.ensure_bar();
     app.ensure_desk();
+    app.ensure_widgets();
 
     // Re-apply the saved wallpaper: the session config only starts a default.
     if app.prefs.wallpaper_file.is_some() || app.prefs.wallpaper != state::WallpaperPreset::Graphite
@@ -449,6 +453,9 @@ struct App {
     /// Right-side desk card when desktop mode is Agent workspace.
     desk: Option<SurfaceSlot>,
     desk_material: material::Material,
+    /// Desktop widget cards (calendar, weather, photos), click-through.
+    widgets: Option<SurfaceSlot>,
+    widgets_material: material::Material,
     /// The notch / Island surface (absent when the style is Off).
     /// An open menu-bar menu: a full-screen transparent overlay.
     menu: Option<SurfaceSlot>,
@@ -753,6 +760,7 @@ impl App {
         }
         self.ensure_dock();
         self.ensure_desk();
+        self.ensure_widgets();
         self.needs_redraw = true;
     }
 
@@ -1155,6 +1163,7 @@ impl App {
         self.update_dock_autohide();
         self.ensure_dock();
         self.ensure_desk();
+        self.ensure_widgets();
         if let Some(t) = self.island_left_at {
             if self.island_expanded && t.elapsed() >= Duration::from_secs(4) && !self.reply_mode {
                 self.island_expanded = false;
@@ -1391,6 +1400,7 @@ impl App {
 
         self.draw_island(scale);
         self.draw_desk(scale, &th);
+        self.draw_widgets(scale, &th);
         let _ = conn.flush();
     }
 
@@ -1500,6 +1510,83 @@ impl App {
         ));
         self.desk_material = mat;
         self.needs_redraw = true;
+    }
+
+    /// Desktop widgets: calendar, weather and photos cards at the top-left,
+    /// under the windows. The surface takes no input — an empty input region
+    /// leaves the desktop's clicks to what is behind it.
+    fn ensure_widgets(&mut self) {
+        let want = self.prefs.look.show_widgets;
+        let mat = self.prefs.look.material(self.prefs.look.dock_material);
+        if !want {
+            if self.widgets.is_some() {
+                self.widgets = None;
+                self.needs_redraw = true;
+            }
+            return;
+        }
+        if self.widgets.is_some() && mat == self.widgets_material {
+            return;
+        }
+        let slot = make_layer_surface(
+            &self.compositor,
+            &self.layer_shell,
+            &self.qh,
+            Layer::Bottom,
+            &material::namespace("nexios-widgets", mat),
+            Anchor::TOP | Anchor::LEFT,
+            0,
+            (surfaces::BAR_HEIGHT as i32 + 12, 0, 0, 14),
+            widgets::W as u32,
+            widgets::H as u32,
+            KeyboardInteractivity::None,
+        );
+        if let Ok(region) = smithay_client_toolkit::compositor::Region::new(&self.compositor) {
+            slot.surface.set_input_region(Some(region.wl_region()));
+        }
+        self.widgets = Some(slot);
+        self.widgets_material = mat;
+        self.needs_redraw = true;
+    }
+
+    fn draw_widgets(&mut self, scale: u32, th: &Theme) {
+        let mat = self.widgets_material;
+        let tint = self.prefs.wall_tint;
+        let Some(slot) = self.widgets.as_mut() else {
+            return;
+        };
+        if !slot.configured || slot.width == 0 {
+            return;
+        }
+        let (w, h) = (slot.width, slot.height);
+        let Ok((buffer, bytes)) = self.pool.create_buffer(
+            (w * scale) as i32,
+            (h * scale) as i32,
+            (w * scale * 4) as i32,
+            Format::Argb8888,
+        ) else {
+            return;
+        };
+        let view = widgets::live();
+        let mut cv = Canvas::new(bytes, w, h, scale as i32);
+        let slab = material::slab(mat, th.surface, tint);
+        widgets::paint(&mut cv, th, &self.fonts, &view, &slab, 0, 0);
+        let rects = if material::blurs(mat) {
+            widgets::card_rects()
+                .iter()
+                .flat_map(|&(x, y, ww, hh)| material::blur_rects(x, y, ww, hh, widgets::RADIUS))
+                .collect()
+        } else {
+            Vec::new()
+        };
+        set_blur(
+            self.blur_mgr.as_ref(),
+            &self.compositor,
+            &self.qh,
+            slot,
+            rects,
+        );
+        present(buffer, &slot.surface, w * scale, h * scale, scale as i32);
     }
 
     fn draw_island(&mut self, scale: u32) {

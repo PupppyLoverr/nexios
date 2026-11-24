@@ -53,8 +53,9 @@ whole Nexios thesis.*
 
 ## What macOS 27 does that we don't (yet)
 
-- **A real widget layer** on the desktop (ours has none; lock screen has a
-  dashboard variant — could grow desktop widgets off it).
+- **A real widget layer** on the desktop — now built (`nexios-widgets`:
+  calendar + weather + photos glass cards). Remaining: editing/adding
+  widgets, more card kinds.
 - **Dynamic-island-as-notification-model**: the notch expands for live
   activity. We have the island; theirs proves the pattern scales to a whole
   OS's worth of glanceable state.

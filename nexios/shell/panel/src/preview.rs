@@ -1163,6 +1163,53 @@ fn material_scene(
     }
 }
 
+/// The widget cards alone over the wallpaper, for a close look.
+fn widgets_shot(fonts: &Fonts, kind: ThemeKind, wallpaper: &str) -> Shot {
+    use crate::lock::{backdrop, blur};
+    use crate::widgets;
+    let margin = 28;
+    let (w, h) = (
+        (widgets::W + margin * 2) as u32,
+        (widgets::H + margin * 2) as u32,
+    );
+    let wp = std::fs::read(format!(
+        "{}/../../assets/wallpapers/{wallpaper}-1920x1080.png",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .ok()
+    .and_then(|b| crate::canvas::decode_png(&b));
+    let tint = wp.as_ref().and_then(crate::material::average);
+    let sharp = backdrop(wp.as_ref(), w, h);
+    let soft = blur(&blur(&sharp, w, h), w, h);
+    let mut out = sharp.clone();
+    let th = Theme::for_kind(kind);
+    let mat = crate::material::Material::Glass;
+    let (ax, ay) = (margin, margin);
+    for &(x, y, ww, hh) in &widgets::card_rects() {
+        let rects = crate::material::blur_rects(x, y, ww, hh, widgets::RADIUS);
+        compositor_backdrop(&sharp, &soft, w, mat, &rects, (ax, ay), &mut out);
+    }
+    let view = widgets::View {
+        cal: widgets::cal_of(chrono::NaiveDate::from_ymd_opt(2026, 11, 22).unwrap()),
+        weather: widgets::parse_weather(Some("11\nTokyo\nMostly Sunny\nH:14° L:3°")),
+        photo: None,
+    };
+    let slab = crate::material::slab(mat, th.surface, tint);
+    let (sw, sh) = (widgets::W as u32, widgets::H as u32);
+    let mut buf = vec![0u8; (sw * sh * 4) as usize];
+    {
+        let mut cv = Canvas::new(&mut buf, sw, sh, 1);
+        widgets::paint(&mut cv, &th, fonts, &view, &slab, 0, 0);
+    }
+    over(&mut out, w, &buf, sw, sh, (ax, ay));
+    Shot {
+        name: format!("widgets-{}", kind.as_str()),
+        w,
+        h,
+        rgba: flatten(&out, w, h, Rgba::rgb(0, 0, 0)),
+    }
+}
+
 /// A composed desktop: the sharp wallpaper, its blurred twin (what a blurring
 /// surface shows), and the scene with bar, dock and island drawn.
 struct Scene {
@@ -1218,7 +1265,7 @@ fn scene_pixels(
             &th,
             fonts,
             &[(1, true), (2, false), (3, false)],
-            &[win(1, "firefox", "Nexios — Firefox", true)],
+            &[win(1, "thunar", "Home — Files", true)],
             None,
             None,
             None,
@@ -1280,6 +1327,32 @@ fn scene_pixels(
     }
     over(&mut out, w, &buf, dw, spec.height, at);
 
+    // Desktop widget cards: calendar, weather and photos top-left, under
+    // the windows — same glass as the dock.
+    {
+        use crate::widgets;
+        let (ax, ay) = (14, BAR_HEIGHT as i32 + 12);
+        if crate::material::blurs(dock_m) {
+            for &(x, y, ww, hh) in &widgets::card_rects() {
+                let rects = crate::material::blur_rects(x, y, ww, hh, widgets::RADIUS);
+                compositor_backdrop(&sharp, &soft, w, dock_m, &rects, (ax, ay), &mut out);
+            }
+        }
+        let view = widgets::View {
+            cal: widgets::cal_of(chrono::NaiveDate::from_ymd_opt(2026, 11, 22).unwrap()),
+            weather: widgets::parse_weather(Some("11\nTokyo\nMostly Sunny\nH:14° L:3°")),
+            photo: None,
+        };
+        let slab = crate::material::slab(dock_m, th.surface, prefs.wall_tint);
+        let (sw, sh) = (widgets::W as u32, widgets::H as u32);
+        let mut buf = vec![0u8; (sw * sh * 4) as usize];
+        {
+            let mut cv = Canvas::new(&mut buf, sw, sh, 1);
+            widgets::paint(&mut cv, &th, fonts, &view, &slab, 0, 0);
+        }
+        over(&mut out, w, &buf, sw, sh, (ax, ay));
+    }
+
     // Notch / island, showing what is playing.
     if notch != nexios_conf::look::NotchStyle::Off {
         let content = Content::Media(crate::media::Media {
@@ -1330,7 +1403,8 @@ fn material_scenes_render() {
     let fonts = Fonts::load();
     let mut shots = Vec::new();
     for kind in [ThemeKind::Dark, ThemeKind::Light] {
-        let wp = if kind == ThemeKind::Dark { "perihelion" } else { "beach" };
+        let wp = "goldengate";
+        shots.push(widgets_shot(&fonts, kind, wp));
         for m in Material::ALL {
             shots.push(material_scene(
                 &fonts,

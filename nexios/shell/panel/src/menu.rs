@@ -16,6 +16,9 @@ use crate::tokens::{Theme, T_LABEL};
 pub enum MenuId {
     Nexios,
     App,
+    File,
+    Edit,
+    Shell,
     Go,
     Window,
     View,
@@ -23,17 +26,31 @@ pub enum MenuId {
 }
 
 impl MenuId {
-    /// The titles after the app name, in bar order.
-    pub const TITLES: [MenuId; 4] = [MenuId::Go, MenuId::Window, MenuId::View, MenuId::Help];
-
     pub fn title(self) -> &'static str {
         match self {
             Self::Nexios => "Nexios",
             Self::App => "App",
+            Self::File => "File",
+            Self::Edit => "Edit",
+            Self::Shell => "Shell",
             Self::Go => "Go",
             Self::Window => "Window",
             Self::View => "View",
             Self::Help => "Help",
+        }
+    }
+
+    /// Resolve a bar title (`focused_app_menus` output) to a menu.
+    pub fn parse(title: &str) -> Option<Self> {
+        match title {
+            "File" => Some(Self::File),
+            "Edit" => Some(Self::Edit),
+            "Shell" => Some(Self::Shell),
+            "Go" => Some(Self::Go),
+            "Window" => Some(Self::Window),
+            "View" => Some(Self::View),
+            "Help" => Some(Self::Help),
+            _ => None,
         }
     }
 }
@@ -92,6 +109,62 @@ pub struct AppCtx<'a> {
 
 pub fn entries(id: MenuId, app: &AppCtx<'_>, dark: bool) -> Vec<Entry> {
     match id {
+        MenuId::File => {
+            let mut v = Vec::new();
+            if let Some(launch) = &app.launch {
+                v.push(item("New Window", Some("Ctrl+N"), sh(launch)));
+            } else {
+                v.push(item(
+                    "Open the Launcher",
+                    Some("Super+Space"),
+                    HitAction::Shell(ShellCmd::ToggleLauncher),
+                ));
+            }
+            v.push(sep());
+            v.push(item(
+                "Close Window",
+                Some("Ctrl+W"),
+                ipc("{\"Action\":{\"CloseWindow\":{\"id\":null}}}"),
+            ));
+            v
+        }
+        MenuId::Edit => vec![
+            item("Undo", Some("Ctrl+Z"), sh("wtype -M ctrl -k z -m ctrl")),
+            item(
+                "Redo",
+                Some("Ctrl+Shift+Z"),
+                sh("wtype -M ctrl -M shift -k z -m shift -m ctrl"),
+            ),
+            sep(),
+            item("Cut", Some("Ctrl+X"), sh("wtype -M ctrl -k x -m ctrl")),
+            item("Copy", Some("Ctrl+C"), sh("wtype -M ctrl -k c -m ctrl")),
+            item("Paste", Some("Ctrl+V"), sh("wtype -M ctrl -k v -m ctrl")),
+            item("Select All", Some("Ctrl+A"), sh("wtype -M ctrl -k a -m ctrl")),
+        ],
+        MenuId::Shell => vec![
+            item(
+                "New Window",
+                Some("Ctrl+N"),
+                app.launch
+                    .as_deref()
+                    .map(sh)
+                    .unwrap_or_else(|| sh("true")),
+            ),
+            item(
+                "New Tab",
+                Some("Ctrl+T"),
+                app.launch
+                    .as_deref()
+                    .map(sh)
+                    .unwrap_or_else(|| sh("true")),
+            ),
+            sep(),
+            item(
+                "Close Window",
+                Some("Ctrl+W"),
+                ipc("{\"Action\":{\"CloseWindow\":{\"id\":null}}}"),
+            ),
+        ],
         MenuId::Nexios => vec![
             item("About This Computer", None, sh("nexios-settings --page about")),
             item("System Settings…", Some("Super+S"), sh("nexios-settings")),

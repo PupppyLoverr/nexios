@@ -63,12 +63,13 @@ corner sign-in variant + dashboard variant — already a superset.
 ## Desktop
 
 macOS 27's real new surface: **widget cards living on the desktop**
-(calendar, weather — glass cards under the bar). Ours has the agent-mode
-`solyra-desk` card (clock/project/env switch) — same idea, agent-scoped.
-**Gap worth keeping on the list**: a general desktop-widget layer
-(clock/date + weather + agent status cards for the normal desktop, not just
-`desktop_mode=agent`). Not built in this pass; it is the one genuinely new
-surface in macOS 27 worth growing.
+(calendar, weather — glass cards under the bar). Built: `nexios-widgets`,
+a click-through `Layer::Bottom` surface painting a Monday-first calendar
+card, a blue weather card (extended `weather.txt`: temp, city, condition,
+H:L lines) and a photos card (newest PNG in `~/Pictures`, else a
+placeholder), all in the shared Glass material. `show_widgets=0` in
+`nexios.conf` turns the layer off. The agent-mode `solyra-desk` card stays
+for `desktop_mode=agent`.
 
 ## The one macOS can't do
 

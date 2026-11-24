@@ -92,6 +92,8 @@ pub struct Look {
     pub dock: DockKind,
     pub dock_autohide: bool,
     pub dock_magnify: bool,
+    /// Desktop widget cards (calendar, weather, photos).
+    pub show_widgets: bool,
     pub show_workspaces: bool,
     pub clock_24h: bool,
     pub show_date: bool,
@@ -115,8 +117,9 @@ impl Default for Look {
             dock: DockKind::default(),
             dock_autohide: false,
             dock_magnify: false,
+            show_widgets: true,
             show_workspaces: true,
-            clock_24h: true,
+            clock_24h: false,
             show_date: true,
             show_seconds: false,
             reduced_motion: false,
@@ -159,6 +162,7 @@ impl Look {
                 .unwrap_or(d.dock),
             dock_autohide: flag(text, "dock_autohide", d.dock_autohide),
             dock_magnify: flag(text, "dock_magnify", d.dock_magnify),
+            show_widgets: flag(text, "show_widgets", d.show_widgets),
             show_workspaces: flag(text, "show_workspaces", d.show_workspaces),
             clock_24h: flag(text, "clock_24h", d.clock_24h),
             show_date: flag(text, "show_date", d.show_date),
@@ -193,6 +197,7 @@ impl Look {
             ("dock_style", Some(self.dock.as_str().into())),
             ("dock_autohide", b(self.dock_autohide)),
             ("dock_magnify", b(self.dock_magnify)),
+            ("show_widgets", b(self.show_widgets)),
             ("show_workspaces", b(self.show_workspaces)),
             ("clock_24h", b(self.clock_24h)),
             ("show_date", b(self.show_date)),
@@ -219,8 +224,8 @@ impl Look {
         match (self.clock_24h, self.show_seconds) {
             (true, false) => "%H:%M",
             (true, true) => "%H:%M:%S",
-            (false, false) => "%-I:%M %p",
-            (false, true) => "%-I:%M:%S %p",
+            (false, false) => "%-I:%M%p",
+            (false, true) => "%-I:%M:%S%p",
         }
     }
 }
@@ -269,10 +274,10 @@ mod tests {
     #[test]
     fn clock_formats() {
         let mut l = Look::default();
-        assert_eq!(l.clock_format(), "%H:%M");
-        l.clock_24h = false;
+        assert_eq!(l.clock_format(), "%-I:%M%p");
+        l.clock_24h = true;
         l.show_seconds = true;
-        assert_eq!(l.clock_format(), "%-I:%M:%S %p");
+        assert_eq!(l.clock_format(), "%H:%M:%S");
     }
 
     #[test]
