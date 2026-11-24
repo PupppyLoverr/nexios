@@ -1599,9 +1599,10 @@ impl App {
             &self.qh,
             Layer::Bottom,
             &material::namespace("nexios-widgets", mat),
-            Anchor::TOP | Anchor::LEFT,
+            // Top-right, like the real desktop's widget column.
+            Anchor::TOP | Anchor::RIGHT,
             0,
-            (surfaces::BAR_HEIGHT as i32 + 12, 0, 0, 14),
+            (surfaces::BAR_HEIGHT as i32 + 12, 14, 0, 0),
             widgets::W as u32,
             widgets::H as u32,
             KeyboardInteractivity::None,
