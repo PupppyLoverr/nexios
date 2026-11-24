@@ -1709,6 +1709,11 @@ impl App {
             })
         };
         let Some(hit) = hit else {
+            // The menu surface covers the screen while it is open: a press
+            // that lands on no entry is the dismiss click.
+            if on_menu {
+                self.close_overlays();
+            }
             return;
         };
 
