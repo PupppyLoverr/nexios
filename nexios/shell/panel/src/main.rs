@@ -256,6 +256,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         cmd_queue,
         wins: Vec::new(),
         ws_list: vec![(1, true), (2, false), (3, false)],
+        last_app_id: None,
         island_msg: None,
         island_override: None,
         icons: HashMap::new(),
@@ -502,6 +503,10 @@ struct App {
     cmd_queue: Arc<Mutex<Vec<ShellCmd>>>,
     wins: Vec<WindowInfo>,
     ws_list: Vec<(u8, bool)>,
+    /// The last app_id that reported is_focused. niri unfocuses every window
+    /// when a click lands on a layer surface (bar, island, menu); the menu
+    /// bar keeps naming that app while its windows still exist, like macOS.
+    last_app_id: Option<String>,
     island_msg: Option<String>,
     island_override: Option<(Instant, String)>,
     icons: HashMap<String, Option<Icon>>,
@@ -1142,6 +1147,17 @@ impl App {
 
     fn sync_compositor_state(&mut self) {
         self.wins = windows();
+        if let Some(w) = self.wins.iter().find(|w| w.is_focused) {
+            self.last_app_id = Some(w.app_id.clone());
+        } else if let Some(id) = &self.last_app_id {
+            // Nothing focused right now: flag the last focused window while
+            // it still exists so its menus keep showing through the blur.
+            if let Some(w) = self.wins.iter_mut().find(|w| &w.app_id == id) {
+                w.is_focused = true;
+            } else {
+                self.last_app_id = None;
+            }
+        }
         self.ws_list = workspaces();
         self.reload_prefs_if_changed();
         self.load_agents();
