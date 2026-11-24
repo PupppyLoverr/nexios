@@ -1,3 +1,12 @@
+# nexios
+
+> **Nexios** is an experiment fork of [AFK-surf/xnulinux](https://github.com/AFK-surf/xnulinux):
+> a hosted kernel personality treated as a first-class desktop *Space*, not a VM window.
+> The experiment's documents and its `nx` driver live in [`nexios/`](nexios/README.md);
+> everything below is upstream's README, kept for rebasing.
+
+---
+
 # xnulinux
 
 Run macOS userspace on Linux by loading the macOS kernel into it.

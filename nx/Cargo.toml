@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: GPL-2.0-only
+[package]
+name = "nx"
+version = "0.1.0"
+edition = "2021"
+license = "GPL-2.0-only"
+description = "Nexios driver: one CLI for build/disk/boot/console/screenshot/test"
+
+[[bin]]
+name = "nx"
+path = "src/main.rs"
+
+[dependencies]
