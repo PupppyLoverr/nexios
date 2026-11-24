@@ -911,7 +911,11 @@ fn menu_bar_and_menus_render() {
             launch: Some("nexios-open terminal".into()),
             has_window: true,
         };
-        for (id, armed) in [(MenuId::Nexios, Some(7)), (MenuId::Window, None)] {
+        for (id, armed) in [
+            (MenuId::Nexios, Some(7)),
+            (MenuId::App, None),
+            (MenuId::Window, None),
+        ] {
             let title = titles.iter().copied().find(|t| t.id == id).unwrap();
             let entries = menu::entries(id, &app, kind == ThemeKind::Dark);
             shots.push(shoot(

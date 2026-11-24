@@ -186,15 +186,34 @@ pub fn entries(id: MenuId, app: &AppCtx<'_>, dark: bool) -> Vec<Entry> {
             },
         ],
         MenuId::App => {
-            let mut v = Vec::new();
+            // The macOS app menu: About / Settings / Quit <AppName>, with New
+            // Window where the shell knows how to spawn one.
+            let mut v = vec![
+                item(&format!("About {}", app.name), None, sh("nexios-settings --page about")),
+                sep(),
+                item("Settings…", Some("Super+,"), sh("nexios-settings")),
+                sep(),
+            ];
             if let Some(cmd) = &app.launch {
-                v.push(item(&format!("New {} Window", app.name), None, sh(cmd)));
+                v.push(item(
+                    &format!("New {} Window", app.name),
+                    Some("Super+N"),
+                    sh(cmd),
+                ));
             }
             if app.has_window {
-                v.push(item("Close Window", Some("Super+W"), ipc("{\"Action\":{\"CloseWindow\":{\"id\":null}}}")));
+                v.push(item(
+                    &format!("Quit {}", app.name),
+                    Some("Super+Q"),
+                    ipc("{\"Action\":{\"CloseWindow\":{\"id\":null}}}"),
+                ));
             }
-            if v.is_empty() {
-                v.push(item("Open the Launcher", Some("Super+D"), HitAction::Shell(ShellCmd::ToggleLauncher)));
+            if v.len() == 4 {
+                v.push(item(
+                    "Open the Launcher",
+                    Some("Super+D"),
+                    HitAction::Shell(ShellCmd::ToggleLauncher),
+                ));
             }
             v
         }
@@ -435,8 +454,17 @@ mod tests {
             has_window: false,
         };
         let e = entries(MenuId::App, &none, true);
-        assert_eq!(e.len(), 1);
+        assert!(!e.iter().any(|x| x.label.starts_with("Quit")));
         assert!(!e.iter().any(|x| x.label.contains("Close")));
+        assert!(e.iter().any(|x| x.label == "Settings…"));
+    }
+
+    #[test]
+    fn app_menu_names_the_app() {
+        let e = entries(MenuId::App, &app(), true);
+        assert!(e.iter().any(|x| x.label == "About Terminal"));
+        assert!(e.iter().any(|x| x.label == "Quit Terminal"));
+        assert!(e.iter().any(|x| x.label == "New Terminal Window"));
     }
 
     #[test]
